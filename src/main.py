@@ -16,7 +16,7 @@ def main() -> int:
     """ 
     # TODO: These values should come from a config file
     base_port = 5000
-    number_of_connections = 1
+    number_of_connections = 4
     image_to_mapping_queue = mp.Queue()
 
     image_receiver_controller = ImageReceiverController(

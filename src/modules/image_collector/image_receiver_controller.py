@@ -2,6 +2,7 @@
 Collect and enqueue images from multiple network connections. 
 """
 
+from collections import deque
 import logging
 import multiprocessing as mp
 
@@ -33,7 +34,7 @@ class ImageReceiverController:
         self.__number_of_connections = number_of_connections
         self.__image_queue = image_queue
 
-        self.__workers = []
+        self.__workers = deque()
         self.__stop_event = mp.Event()
 
     def start_workers(self) -> None:
@@ -53,7 +54,7 @@ class ImageReceiverController:
             process = mp.Process(target=image_receiver_worker.run, name=f"Worker-{id}")
             process.start()
 
-            self.__logger.info(f"Process {process.pid} spawned listening at port {port}")
+            self.__logger.info(f"Process {process.name} (PID {process.pid}) spawned listening at port {port}")
 
             self.__workers.append(process)
 
@@ -63,6 +64,13 @@ class ImageReceiverController:
         """
         self.__stop_event.set()
 
-        for worker in self.__workers:
-            self.__logger.info(f"Joining process {worker.pid}")
-            worker.join()
+        for process in self.__workers:
+            self.__logger.info(f"Joining process {process.name} (PID {process.pid})")
+            process.join()
+
+        while self.__workers:
+            process = self.__workers.popleft()
+
+            if process.is_alive():
+                self.__logger.warning(f"Terminating process {process.name} (PID {process.pid})")
+                process.terminate()
