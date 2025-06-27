@@ -5,6 +5,7 @@ Collect and enqueue images from multiple network connections.
 from collections import deque
 import logging
 import multiprocessing as mp
+import queue
 
 from .image_receiver_worker import ImageReceiverWorker
 
@@ -14,6 +15,7 @@ class ImageReceiverController:
     Receives and aggregates images from multiple network connections.
     """
 
+    __QUEUE_TIMEOUT_SECONDS = 20.0
     __logger = logging.getLogger(__name__)
 
     def __init__(
@@ -66,7 +68,7 @@ class ImageReceiverController:
 
         for process in self.__workers:
             self.__logger.info(f"Joining process {process.name} (PID {process.pid})")
-            process.join()
+            process.join(self.__QUEUE_TIMEOUT_SECONDS)
 
         while self.__workers:
             process = self.__workers.popleft()

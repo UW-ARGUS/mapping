@@ -5,3 +5,6 @@
 # Python
 __pycache__/
 .venv/
+
+# Logs
+src/logs

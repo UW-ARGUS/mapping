@@ -5,6 +5,8 @@ ARGUS 3D mapping reconstruction.
 import cv2
 import time
 import multiprocessing as mp
+import queue
+import time
 
 from modules.image_data import ImageData
 from modules.image_collector.image_receiver_controller import ImageReceiverController 
@@ -16,8 +18,9 @@ def main() -> int:
     """ 
     # TODO: These values should come from a config file
     base_port = 5000
-    number_of_connections = 4
-    image_to_mapping_queue = mp.Queue()
+    number_of_connections = 2
+    image_to_mapping_queue_size = 1000
+    image_to_mapping_queue = mp.Queue(maxsize=image_to_mapping_queue_size)
 
     image_receiver_controller = ImageReceiverController(
         base_port=base_port,
@@ -28,6 +31,7 @@ def main() -> int:
     try:
         image_receiver_controller.start_workers()
 
+        counter = 0
         while True:
             image_data = image_to_mapping_queue.get()
 
@@ -36,23 +40,31 @@ def main() -> int:
 
             assert isinstance(image_data, ImageData)
 
-            cv2.putText(
-                image_data.image,
-                f"{image_data.timestamp:.3f}",
-                (10, 20),  # Top-left corner
-                cv2.FONT_HERSHEY_SIMPLEX,  # Font type
-                0.5,  # Font size
-                (255, 0, 255),  # Fuschia
-                1,  # Line thickness
-            )
+            # cv2.putText(
+            #     image_data.image,
+            #     f"{image_data.timestamp:.3f}",
+            #     (10, 20),  # Top-left corner
+            #     cv2.FONT_HERSHEY_SIMPLEX,  # Font type
+            #     0.5,  # Font size
+            #     (255, 0, 255),  # Fuschia
+            #     1,  # Line thickness
+            # )
 
-            cv2.imshow(f"Image display", image_data.image)
+            cv2.imshow(f"Image display {image_data.camera_device_id}", image_data.image)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
+                print("1")
                 break
 
-            if cv2.getWindowProperty("Image display", cv2.WND_PROP_VISIBLE) < 1:
+            image_file_name = f"image_{image_data.camera_device_id}_{counter}.png"
+            cv2.imwrite(image_file_name, image_data.image)
+
+            if counter == 50:
                 break
+
+            counter += 1
+    except Exception as e:
+        print(e)
     finally:
         image_receiver_controller.stop_workers()
 

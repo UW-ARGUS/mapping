@@ -6,6 +6,7 @@ import logging
 import multiprocessing as mp
 import socket
 import struct
+import queue
 
 import cv2
 import numpy as np
@@ -19,7 +20,7 @@ class ImageReceiverWorker:
     """
 
     __HOST_IP_ADDRESS = "0.0.0.0"
-    __IMAGE_HEADER_LENGTH_BYTES = 12
+    __IMAGE_HEADER_LENGTH_BYTES = 16
     __SOCKET_TIMEOUT_SECONDS = 10.0
     __logger = logging.getLogger(__name__)
 
@@ -69,9 +70,28 @@ class ImageReceiverWorker:
                 except socket.timeout:
                     self.__logger.exception("Connection timed out")
                     continue 
+                except Exception as e:
+                    self.__logger.exception("Recieve image error: {e}")
 
-                self.__image_queue.put(image_data)
-        except KeyboardInterrupt:
+                try:
+                    self.__image_queue.put(image_data, block=False)
+                except queue.Full:
+                    self.__logger.exception("Queue is full")
+                except Exception as e:
+                    self.__logger.exception("Enqueue error: {e}")
+        finally:
+            for _ in range(1000):
+                try:
+                    self.__image_queue.put_nowait(None)
+                except queue.Full: 
+                    break
+            
+            for _ in range(1000):
+                try:
+                    data = self.__image_queue.get()
+                except queue.Empty:
+                    break
+
             return
 
     def __receive_image_data(self) -> ImageData:
@@ -93,8 +113,8 @@ class ImageReceiverWorker:
 
             raw_image_header += packet
 
-        timestamp, image_data_length = struct.unpack(
-            ">dI",  # Big endian (network endiannes), float64, uint32
+        timestamp, camera_device_id, image_data_length = struct.unpack(
+            ">dII",  # Big endian (network endiannes), float64, uint32, uint32
             raw_image_header,
         )
 
@@ -112,7 +132,12 @@ class ImageReceiverWorker:
         image_array = np.frombuffer(raw_image_data, dtype=np.uint8)
         image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
 
-        return ImageData(timestamp, image_data_length, image)
+        return ImageData(
+            timestamp,
+            camera_device_id,
+            image_data_length,
+            image,
+        )
 
     def __setup_socket(self) -> bool:
         """
