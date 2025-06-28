@@ -6,21 +6,23 @@ from collections import deque
 import logging
 import multiprocessing as mp
 
+from src.utilities.message_queue import MessageQueue
 from .image_receiver_worker import ImageReceiverWorker
 
 
-class ImageReceiverController:
+class ImageReceiverManager:
     """
     Receives and aggregates images from multiple network connections.
     """
 
+    __WORKER_JOIN_TIMEOUT_SECONDS = 10.0
     __logger = logging.getLogger(__name__)
 
     def __init__(
         self,
         base_port: int,
         number_of_connections: int,
-        image_queue: mp.Queue,
+        image_queue: MessageQueue,
     ) -> None:
         """
         Class constructor.
@@ -29,6 +31,7 @@ class ImageReceiverController:
         ----------
         base_port: The base port for TCP network connections.
         number_of_connections: The number of connections.
+        image_queue: A queue used to send image data.
         """
         self.__base_port = base_port
         self.__number_of_connections = number_of_connections
@@ -66,7 +69,7 @@ class ImageReceiverController:
 
         for process in self.__workers:
             self.__logger.info(f"Joining process {process.name} (PID {process.pid})")
-            process.join()
+            process.join(self.__WORKER_JOIN_TIMEOUT_SECONDS)
 
         while self.__workers:
             process = self.__workers.popleft()

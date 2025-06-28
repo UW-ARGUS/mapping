@@ -10,6 +10,7 @@ import struct
 import cv2
 import numpy as np
 
+from src.utilities.message_queue import MessageQueue
 from modules.image_data import ImageData
 
 
@@ -27,7 +28,7 @@ class ImageReceiverWorker:
         self,
         port: int,
         stop_event: mp.Event,
-        image_queue: mp.Queue,
+        image_queue: MessageQueue,
     ) -> None:
         """
         Class constructor.
@@ -36,6 +37,7 @@ class ImageReceiverWorker:
         ----------
         port: The port to receive image data from.
         stop_event: An event to signal the worker to halt.
+        image_queue: A queue used to send image data.
         """
         self.__port = port
         self.__stop_event = stop_event
@@ -71,7 +73,8 @@ class ImageReceiverWorker:
                     continue 
 
                 self.__image_queue.put(image_data)
-        except KeyboardInterrupt:
+        finally:
+            self.__image_queue.flush_and_drain_queue()
             return
 
     def __receive_image_data(self) -> ImageData:

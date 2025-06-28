@@ -6,35 +6,35 @@ import cv2
 import time
 import multiprocessing as mp
 
-from modules.image_data import ImageData
-from modules.image_collector.image_receiver_controller import ImageReceiverController 
+from src.modules.image_data import ImageData
+from src.modules.image_collector.image_receiver_manager import ImageReceiverManager
+from src.utilities.message_queue import MessageQueue
 
 
 def main() -> int:
     """
     Main function.
-    """ 
+    """
+
     # TODO: These values should come from a config file
     base_port = 5000
     number_of_connections = 4
-    image_to_mapping_queue = mp.Queue()
+    image_to_mapping_queue = MessageQueue[ImageData](maxsize=100)
 
-    image_receiver_controller = ImageReceiverController(
+    image_receiver_manager = ImageReceiverManager(
         base_port=base_port,
         number_of_connections=number_of_connections,
         image_queue=image_to_mapping_queue,
     )
 
     try:
-        image_receiver_controller.start_workers()
+        image_receiver_manager.start_workers()
 
         while True:
             image_data = image_to_mapping_queue.get()
 
             if image_data is None:
                 continue
-
-            assert isinstance(image_data, ImageData)
 
             cv2.putText(
                 image_data.image,
@@ -54,7 +54,7 @@ def main() -> int:
             if cv2.getWindowProperty("Image display", cv2.WND_PROP_VISIBLE) < 1:
                 break
     finally:
-        image_receiver_controller.stop_workers()
+        image_receiver_manager.stop_workers()
 
     return 0
 
