@@ -45,12 +45,9 @@ def main() -> int:
                 1,  # Line thickness
             )
 
-            cv2.imshow(f"Image display", image_data.image)
+            cv2.imshow(f"Image display {image_data.device_id}", image_data.image)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-
-            if cv2.getWindowProperty("Image display", cv2.WND_PROP_VISIBLE) < 1:
                 break
     finally:
         image_receiver_manager.stop_workers()

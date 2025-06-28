@@ -20,7 +20,7 @@ class ImageReceiverWorker:
     """
 
     __HOST_IP_ADDRESS = "0.0.0.0"
-    __IMAGE_HEADER_LENGTH_BYTES = 12
+    __IMAGE_HEADER_LENGTH_BYTES = 16
     __SOCKET_TIMEOUT_SECONDS = 10.0
     __logger = logging.getLogger(__name__)
 
@@ -96,8 +96,8 @@ class ImageReceiverWorker:
 
             raw_image_header += packet
 
-        timestamp, image_data_length = struct.unpack(
-            ">dI",  # Big endian (network endiannes), float64, uint32
+        timestamp, device_id, image_data_length = struct.unpack(
+            ">dII",  # Big endian (network endiannes), float64, uint32, uint32
             raw_image_header,
         )
 
@@ -115,7 +115,12 @@ class ImageReceiverWorker:
         image_array = np.frombuffer(raw_image_data, dtype=np.uint8)
         image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
 
-        return ImageData(timestamp, image_data_length, image)
+        return ImageData(
+            timestamp,
+            device_id,
+            image_data_length,
+            image,
+        )
 
     def __setup_socket(self) -> bool:
         """

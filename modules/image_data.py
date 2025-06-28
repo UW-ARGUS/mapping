@@ -14,5 +14,6 @@ class ImageData:
     """
 
     timestamp: float
+    device_id: int
     data_length: int
     image: np.array
