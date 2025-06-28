@@ -6,16 +6,15 @@ import cv2
 import time
 import multiprocessing as mp
 
-from src.modules.image_data import ImageData
-from src.modules.image_collector.image_receiver_manager import ImageReceiverManager
-from src.utilities.message_queue import MessageQueue
+from modules.image_data import ImageData
+from modules.image_receiver.image_receiver_manager import ImageReceiverManager
+from utilities.message_queue import MessageQueue
 
 
 def main() -> int:
     """
     Main function.
     """
-
     # TODO: These values should come from a config file
     base_port = 5000
     number_of_connections = 4

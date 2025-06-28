@@ -10,7 +10,7 @@ import struct
 import cv2
 import numpy as np
 
-from src.utilities.message_queue import MessageQueue
+from utilities.message_queue import MessageQueue
 from modules.image_data import ImageData
 
 

@@ -6,7 +6,7 @@ from collections import deque
 import logging
 import multiprocessing as mp
 
-from src.utilities.message_queue import MessageQueue
+from utilities.message_queue import MessageQueue
 from .image_receiver_worker import ImageReceiverWorker
 
 
