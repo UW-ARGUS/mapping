@@ -4,6 +4,7 @@ A worker class to receive image data from a network connection.
 
 import logging
 import multiprocessing as mp
+import os
 import socket
 import struct
 
@@ -22,6 +23,7 @@ class ImageReceiverWorker:
     __HOST_IP_ADDRESS = "0.0.0.0"
     __IMAGE_HEADER_LENGTH_BYTES = 16
     __SOCKET_TIMEOUT_SECONDS = 10.0
+    __INVALID_IMAGE_DATA_THRESHOLD = 50
     __logger = logging.getLogger(__name__)
 
     def __init__(
@@ -44,6 +46,7 @@ class ImageReceiverWorker:
         self.__image_queue = image_queue
 
         self.__connection = None
+        self.__invalid_image_data = 0
 
     def __del__(self) -> None:
         """
@@ -62,28 +65,36 @@ class ImageReceiverWorker:
             connection_successful = self.__setup_socket()
 
             while not self.__stop_event.is_set() and not connection_successful:
-                self.__logger.info("Retrying connection")
+                self.__logger.info(f"[PID: {os.getpid()}] Retrying connection")
                 connection_successful = self.__setup_socket()
 
             while not self.__stop_event.is_set():
                 try:
                     image_data = self.__receive_image_data()
                 except socket.timeout:
-                    self.__logger.exception("Connection timed out")
+                    self.__logger.exception(f"[PID: {os.getpid()}] Connection timed out")
                     continue 
+
+                if image_data is None:
+                    if self.__invalid_image_data >= self.__INVALID_IMAGE_DATA_THRESHOLD:
+                        self.__logger.error(f"[PID: {os.getpid()}] Exceeded invalid image data threshold")
+                        return
+                    else:
+                        self.__invalid_image_data += 1
+                        continue
 
                 self.__image_queue.put(image_data)
         finally:
             self.__image_queue.flush_and_drain_queue()
             return
 
-    def __receive_image_data(self) -> ImageData:
+    def __receive_image_data(self) -> None | ImageData:
         """
         Receive image from network.
 
         Returns
         -------
-        ImageData: Image data received from network.
+        ImageData: Image data received from network, or None if an error occured.
         """
         # Receive image header from network
         raw_image_header = b""
@@ -91,8 +102,8 @@ class ImageReceiverWorker:
             packet = self.__connection.recv(self.__IMAGE_HEADER_LENGTH_BYTES - len(raw_image_header))
 
             if not packet:
-                self.__logger.warning("Invalid image header data")
-                continue
+                self.__logger.warning(f"[PID: {os.getpid()}] Invalid image header data")
+                return None
 
             raw_image_header += packet
 
@@ -107,8 +118,8 @@ class ImageReceiverWorker:
             packet = self.__connection.recv(image_data_length - len(raw_image_data))
 
             if not packet:
-                self.__logger.warning("Invalid image data")
-                continue
+                self.__logger.warning(f"[PID: {os.getpid()}] Invalid image data")
+                return None 
 
             raw_image_data += packet
 
@@ -136,15 +147,15 @@ class ImageReceiverWorker:
 
         try:
             socket_instance.listen()
-            self.__logger.info(f"Listening on {self.__HOST_IP_ADDRESS}:{self.__port}")
+            self.__logger.info(f"[PID: {os.getpid()}] Listening on {self.__HOST_IP_ADDRESS}:{self.__port}")
 
             connection, address = socket_instance.accept()
         except socket.timeout:
-            self.__logger.exception("Connection timed out")
+            self.__logger.exception(f"[PID: {os.getpid()}] Connection timed out")
             socket_instance.close()
             return False
 
-        self.__logger.info(f"Connected by address {address}")
+        self.__logger.info(f"[PID: {os.getpid()}] Connected by address {address}")
         self.__connection = connection
 
         return True
