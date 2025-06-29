@@ -25,7 +25,7 @@ class MessageQueue(typing.Generic[T]):
     ):
         """
         Class constructor.
-        
+
         Parameters
         ----------
         maxsize: The maximum size of the queue.
@@ -86,4 +86,3 @@ class MessageQueue(typing.Generic[T]):
         self.flush_queue()
         time.sleep(self.__QUEUE_DELAY_SECONDS)
         self.drain_queue()
-

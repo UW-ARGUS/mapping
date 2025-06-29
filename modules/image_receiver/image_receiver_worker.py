@@ -73,11 +73,13 @@ class ImageReceiverWorker:
                     image_data = self.__receive_image_data()
                 except socket.timeout:
                     self.__logger.exception(f"[PID: {os.getpid()}] Connection timed out")
-                    continue 
+                    continue
 
                 if image_data is None:
                     if self.__invalid_image_data >= self.__INVALID_IMAGE_DATA_THRESHOLD:
-                        self.__logger.error(f"[PID: {os.getpid()}] Exceeded invalid image data threshold")
+                        self.__logger.error(
+                            f"[PID: {os.getpid()}] Exceeded invalid image data threshold"
+                        )
                         return
                     else:
                         self.__invalid_image_data += 1
@@ -99,7 +101,9 @@ class ImageReceiverWorker:
         # Receive image header from network
         raw_image_header = b""
         while len(raw_image_header) < self.__IMAGE_HEADER_LENGTH_BYTES:
-            packet = self.__connection.recv(self.__IMAGE_HEADER_LENGTH_BYTES - len(raw_image_header))
+            packet = self.__connection.recv(
+                self.__IMAGE_HEADER_LENGTH_BYTES - len(raw_image_header)
+            )
 
             if not packet:
                 self.__logger.warning(f"[PID: {os.getpid()}] Invalid image header data")
@@ -119,7 +123,7 @@ class ImageReceiverWorker:
 
             if not packet:
                 self.__logger.warning(f"[PID: {os.getpid()}] Invalid image data")
-                return None 
+                return None
 
             raw_image_data += packet
 
@@ -147,7 +151,9 @@ class ImageReceiverWorker:
 
         try:
             socket_instance.listen()
-            self.__logger.info(f"[PID: {os.getpid()}] Listening on {self.__HOST_IP_ADDRESS}:{self.__port}")
+            self.__logger.info(
+                f"[PID: {os.getpid()}] Listening on {self.__HOST_IP_ADDRESS}:{self.__port}"
+            )
 
             connection, address = socket_instance.accept()
         except socket.timeout:

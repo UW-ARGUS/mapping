@@ -1,5 +1,5 @@
 """
-Collect and enqueue images from multiple network connections. 
+Collect and enqueue images from multiple network connections.
 """
 
 from collections import deque
@@ -57,7 +57,9 @@ class ImageReceiverManager:
             process = mp.Process(target=image_receiver_worker.run, name=f"Worker-{id}")
             process.start()
 
-            self.__logger.info(f"Process {process.name} (PID {process.pid}) spawned listening at port {port}")
+            self.__logger.info(
+                f"Process {process.name} (PID {process.pid}) spawned listening at port {port}"
+            )
 
             self.__workers.append(process)
 

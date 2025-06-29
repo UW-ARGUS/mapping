@@ -3,8 +3,6 @@ ARGUS 3D mapping reconstruction.
 """
 
 import cv2
-import time
-import multiprocessing as mp
 
 from modules.image_data import ImageData
 from modules.image_receiver.image_receiver_manager import ImageReceiverManager
@@ -47,7 +45,7 @@ def main() -> int:
 
             cv2.imshow(f"Image display {image_data.device_id}", image_data.image)
 
-            if cv2.waitKey(1) & 0xFF == ord('q'):
+            if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
     finally:
         image_receiver_manager.stop_workers()
