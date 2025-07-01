@@ -35,6 +35,16 @@ python -m venv .venv
 ```
 pip install -r requirements.txt
 ```
+
+## Run Linters and Formatters
+To lint and format the code, we employ `black` and `flake8` Python libraries. To run the linters and formatters, run the following commands at the root of your repository:
+```
+black .
+flake8 .
+```
+
+_Note: The repository has a CI/CD job in the pipeline that checks for linting and formatting. If this job fails you can fix this by running the commands above locally and pushing the updated changes._
+
 ## Teardown
 To deactivate the virtual environment, run the command below.
 ```
