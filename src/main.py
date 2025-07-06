@@ -16,7 +16,13 @@ def main() -> int:
     # TODO: These values should come from a config file
     base_port = 5000
     number_of_connections = 2
+    image_state_array = []
+    image_data_array = []
     image_to_mapping_queue = MessageQueue[ImageData](maxsize=100)
+
+    for _ in range(number_of_connections):
+        image_data_array.append(None)
+        image_state_array.append(False)
 
     image_receiver_manager = ImageReceiverManager(
         base_port=base_port,
@@ -24,31 +30,28 @@ def main() -> int:
         image_queue=image_to_mapping_queue,
     )
 
-    try:
-        image_receiver_manager.start_workers()
+    image_receiver_manager.start_workers()
 
-        while True:
+    while True:
+        try:
             image_data = image_to_mapping_queue.get()
 
             if image_data is None:
                 continue
 
-            cv2.putText(
-                image_data.image,
-                f"{image_data.timestamp:.3f}",
-                (10, 20),  # Top-left corner
-                cv2.FONT_HERSHEY_SIMPLEX,  # Font type
-                0.5,  # Font size
-                (255, 0, 255),  # Fuschia
-                1,  # Line thickness
-            )
+            # Update the state array with image device id
+            image_state_array[image_data.device_id] = True
 
-            cv2.imshow(f"Image display {image_data.device_id}", image_data.image)
+            # Check if 3D reconstruction pipeline should run
+            if all(image_state_array):
+                assert all(image_data is not None in image_data_array)
 
-            if cv2.waitKey(1) & 0xFF == ord("q"):
-                break
-    finally:
-        image_receiver_manager.stop_workers()
+                # Run VGGT
+                pass
+
+        except KeyboardInterrupt as e:
+            image_receiver_manager.stop_workers()
+            break
 
     return 0
 
