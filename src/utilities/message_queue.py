@@ -86,3 +86,10 @@ class MessageQueue(typing.Generic[T]):
         self.flush_queue()
         time.sleep(self.__QUEUE_DELAY_SECONDS)
         self.drain_queue()
+    
+    def size(self) -> int:
+        """
+        Returns the approx size of the queue.
+        """
+        return self.__queue.qsize()
+
