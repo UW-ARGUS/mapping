@@ -5,3 +5,15 @@ opencv-python
 # Linters and formatters are explicitly versioned
 black==24.2.0
 flake8==7.3.0
+
+torch==2.3.1
+torchvision==0.18.1
+numpy==1.26.1
+Pillow
+huggingface_hub
+einops
+safetensors
+
+matplotlib
+scipy
+requests

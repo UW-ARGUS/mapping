@@ -37,56 +37,55 @@ def main(device, model) -> int:
     try:
         image_receiver_manager.start_workers()
 
-        print("waiting for images...")
-        while image_to_mapping_queue.size() < 4:
-            pass
-        # print(f"size of the q: {image_to_mapping_queue.size()}")
-        time.sleep(2)
-        filenames = []
-        for i in range(4):
-            image_data = image_to_mapping_queue.get()
-            filenames.append(f"received_{image_data.device_id}.jpg")
-            cv2.imwrite(filenames[i], image_data.image)
+        while True:
+            print("waiting for images...")
+            while image_to_mapping_queue.size() < 4:
+                pass
+            filenames = []
+            for i in range(4):
+                image_data = image_to_mapping_queue.get()
+                filenames.append(f"received_{image_data.device_id}.jpg")
+                cv2.imwrite(filenames[i], image_data.image)
 
-        images = load_and_preprocess_images(filenames).to(device)
-        with torch.no_grad():
-            predictions = model(images)
+            images = load_and_preprocess_images(filenames).to(device)
+            with torch.no_grad():
+                predictions = model(images)
 
-         # Convert pose encoding to extrinsic and intrinsic matrices
-        print("Converting pose encoding to extrinsic and intrinsic matrices...")
-        extrinsic, intrinsic = pose_encoding_to_extri_intri(predictions["pose_enc"], images.shape[-2:])
-        predictions["extrinsic"] = extrinsic
-        predictions["intrinsic"] = intrinsic
+            # Convert pose encoding to extrinsic and intrinsic matrices
+            print("Converting pose encoding to extrinsic and intrinsic matrices...")
+            extrinsic, intrinsic = pose_encoding_to_extri_intri(predictions["pose_enc"], images.shape[-2:])
+            predictions["extrinsic"] = extrinsic
+            predictions["intrinsic"] = intrinsic
 
-        # Convert tensors to numpy
-        for key in predictions.keys():
-            if isinstance(predictions[key], torch.Tensor):
-                predictions[key] = predictions[key].cpu().numpy().squeeze(0)  # remove batch dimension
-        predictions['pose_enc_list'] = None # remove pose_enc_list
+            # Convert tensors to numpy
+            for key in predictions.keys():
+                if isinstance(predictions[key], torch.Tensor):
+                    predictions[key] = predictions[key].cpu().numpy().squeeze(0)  # remove batch dimension
+            predictions['pose_enc_list'] = None # remove pose_enc_list
 
-        # Generate world points from depth map
-        print("Computing world points from depth map...")
-        depth_map = predictions["depth"]  # (S, H, W, 1)
-        world_points = unproject_depth_map_to_point_map(depth_map, predictions["extrinsic"], predictions["intrinsic"])
-        predictions["world_points_from_depth"] = world_points
+            # Generate world points from depth map
+            print("Computing world points from depth map...")
+            depth_map = predictions["depth"]  # (S, H, W, 1)
+            world_points = unproject_depth_map_to_point_map(depth_map, predictions["extrinsic"], predictions["intrinsic"])
+            predictions["world_points_from_depth"] = world_points
 
-        # Clean up
-        torch.cuda.empty_cache()
+            # Clean up
+            torch.cuda.empty_cache()
 
-        glbscene = predictions_to_glb(
-            predictions,
-            conf_thres=0.10,
-            filter_by_frames="all",
-            mask_black_bg=False,
-            mask_white_bg=False,
-            show_cam=False,
-            mask_sky=False,
-            target_dir=None,
-            prediction_mode="Predicted Pointmap",
-        )
-        glbscene.export(file_obj='glbtest.glb')
+            glbscene = predictions_to_glb(
+                predictions,
+                conf_thres=0.10,
+                filter_by_frames="all",
+                mask_black_bg=False,
+                mask_white_bg=False,
+                show_cam=False,
+                mask_sky=False,
+                target_dir=None,
+                prediction_mode="Predicted Pointmap",
+            )
+            glbscene.export(file_obj='../../gui/src/assets/mymy_room.glb')
 
-        print("DONE EXPORT YAYYYYYYYYYYYYY")
+            print("DONE EXPORT YAYYYYYYYYYYYYY")
 
             # if image_data is None:
             #     continue
