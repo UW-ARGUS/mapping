@@ -7,7 +7,10 @@ from vggt.utils.pose_enc import pose_encoding_to_extri_intri
 from vggt.utils.geometry import unproject_depth_map_to_point_map
 
 from pathlib import Path
-
+import os
+import fcntl
+import glob
+import time
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model = VGGT()
@@ -18,12 +21,67 @@ model.load_state_dict(torch.hub.load_state_dict_from_url(_URL))
 model.eval()
 model = model.to(device)
 
+
+SHARED_DIR = '../../gui/src/assets'
+LOCK_FILE = os.path.join(SHARED_DIR, "batch.lock")
+
+def wait_for_four_images(directory_path):
+    """
+    Blocks execution until exactly 4 .jpg files are found in the directory.
+    Returns a sorted list of the file paths.
+    """
+    print(f"⏳ Waiting for exactly 4 .jpg files in '{directory_path}'...")
+    
+    while True:
+        # 1. Grab all .jpg files in the folder
+        search_pattern = os.path.join(directory_path, "*.jpg")
+        jpg_files = glob.glob(search_pattern)
+        
+        # 2. Check the count
+        current_count = len(jpg_files)
+        
+        if current_count == 4:
+            print("\n✅ Exactly 4 images found! Unlocking pipeline...")
+            return sorted(jpg_files)
+            
+        elif current_count > 4:
+            # Helpful warning if Script 1 is dumping too many files
+            print(f"\r⚠️ Found {current_count} images. Waiting for exactly 4...", end="")
+        else:
+            # Keep the terminal clean while waiting
+            print(f"\r⏳ Currently see {current_count}/4 images. Waiting...", end="")
+            
+        # 3. CRITICAL: Sleep to prevent 100% CPU usage
+        time.sleep(0.1)
+
+def get_absolute_jpg_paths():
+    # 3. Build your search pattern using the absolute directory
+    search_pattern = os.path.join(SHARED_DIR, "*.jpg")
+    
+    # 4. Glob will now automatically return the FULL paths for every file
+    jpg_files = glob.glob(search_pattern)
+    
+    return sorted(jpg_files)
+
+final_glb_path = '../../gui/src/assets/mymy_room.glb'
+temp_glb_path = '../../gui/src/assets/mymy_room_temp.glb'
+
 while True:
     print("starting..")
     # Find all .jpg files in the current directory and get their names
-    filenames = [file.name for file in Path('.').glob('*.jpg')]
-    
-    images = load_and_preprocess_images(filenames).to(device)
+
+    ready_images = wait_for_four_images(SHARED_DIR)
+
+    with open(LOCK_FILE, 'r+') as lock_file:
+            fcntl.flock(lock_file, fcntl.LOCK_EX)
+            try:
+                print("🔒 Lock acquired. Obtaining the images...")
+                filenames = get_absolute_jpg_paths()
+                images = load_and_preprocess_images(filenames).to(device)
+            finally:
+                fcntl.flock(lock_file, fcntl.LOCK_UN)
+                print("🔓 Images acquired. Lock released.")
+
     with torch.no_grad():
         predictions = model(images)
 
@@ -59,5 +117,7 @@ while True:
         target_dir=None,
         prediction_mode="Predicted Pointmap",
     )
-    glbscene.export(file_obj='../../gui/src/assets/mymy_room.glb')
+    glbscene.export(file_obj=temp_glb_path)
+
+    os.replace(temp_glb_path, final_glb_path)
     print("finished!!")
