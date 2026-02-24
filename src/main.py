@@ -41,10 +41,12 @@ def main(device, model) -> int:
             print("waiting for images...")
             while image_to_mapping_queue.size() < 4:
                 pass
+
+            time.sleep(2)
             filenames = []
             for i in range(4):
                 image_data = image_to_mapping_queue.get()
-                filenames.append(f"received_{image_data.device_id}.jpg")
+                filenames.append(f"../../gui/src/assets/received_{image_data.device_id}.jpg")
                 cv2.imwrite(filenames[i], image_data.image)
 
             images = load_and_preprocess_images(filenames).to(device)
